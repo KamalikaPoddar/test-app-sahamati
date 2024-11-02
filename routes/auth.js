@@ -3,6 +3,32 @@ const router = express.Router();
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 
+const jwt = require('jsonwebtoken');
+const CryptoJS = require('crypto-js');
+
+// ... (other code)
+
+// When signing JWT tokens
+const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, {
+  expiresIn: '1h',
+});
+
+// When encrypting sensitive data (in User model)
+pan: {
+  type: String,
+  required: true,
+  unique: true,
+  set: (value) => CryptoJS.AES.encrypt(value, process.env.ENCRYPTION_KEY).toString(),
+  get: (value) => CryptoJS.AES.decrypt(value, process.env.ENCRYPTION_KEY).toString(CryptoJS.enc.Utf8),
+},
+aadhaar: {
+  type: String,
+  required: true,
+  unique: true,
+  set: (value) => CryptoJS.AES.encrypt(value, process.env.ENCRYPTION_KEY).toString(),
+  get: (value) => CryptoJS.AES.decrypt(value, process.env.ENCRYPTION_KEY).toString(CryptoJS.enc.Utf8),
+},
+
 // Signup route
 router.post('/signup', async (req, res) => {
   try {
