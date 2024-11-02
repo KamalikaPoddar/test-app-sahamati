@@ -1,17 +1,18 @@
 'use client'
 
 import { useState } from 'react'
-import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { FamilyTreePopup } from './FamilyTreePopup'
+import { X } from 'lucide-react'
 
 export default function LandingPage() {
   const router = useRouter()
   const [isPopupOpen, setIsPopupOpen] = useState(false)
   const [isFamilyTreePopupOpen, setIsFamilyTreePopupOpen] = useState(false)
+  const [isUnclaimedAccountsOpen, setIsUnclaimedAccountsOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -21,6 +22,15 @@ export default function LandingPage() {
 
   const handleCheckFamilyTree = () => {
     setIsFamilyTreePopupOpen(true)
+  }
+
+  const handleCheckUnclaimedAccounts = () => {
+    setIsUnclaimedAccountsOpen(true)
+  }
+
+  const handleOpenRBIPortal = () => {
+    window.open('https://udgam.rbi.org.in/unclaimed-deposits/#/login', '_blank', 'noopener,noreferrer')
+    setIsUnclaimedAccountsOpen(false)
   }
 
   const handleSubmit = async () => {
@@ -121,9 +131,12 @@ export default function LandingPage() {
               >
                 Check Family Tree
               </Button>
-              <Link href="/unclaimed-accounts" passHref>
-                <Button className="h-32 w-full text-lg">Check Unclaimed Accounts</Button>
-              </Link>
+              <Button 
+                className="h-32 w-full text-lg"
+                onClick={handleCheckUnclaimedAccounts}
+              >
+                Check Unclaimed Accounts
+              </Button>
             </div>
           </div>
         </div>
@@ -164,6 +177,36 @@ export default function LandingPage() {
         isOpen={isFamilyTreePopupOpen} 
         onClose={() => setIsFamilyTreePopupOpen(false)}
       />
+
+      <Dialog open={isUnclaimedAccountsOpen} onOpenChange={setIsUnclaimedAccountsOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle className="flex justify-between items-center">
+              <span>RBI Unclaimed Deposits</span>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setIsUnclaimedAccountsOpen(false)}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-sm text-gray-500">
+              You will be redirected to the RBI's Unclaimed Deposits portal in a new tab. This external site allows you to check for any unclaimed deposits in your name.
+            </p>
+            <p className="mt-2 text-sm text-gray-500">
+              Please note that this is an external website, and you may need to log in or provide additional information to access your unclaimed deposits.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button onClick={handleOpenRBIPortal}>
+              Open RBI Portal
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
