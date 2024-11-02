@@ -21,8 +21,58 @@ export default function FinancialAccountsPage() {
 
   useEffect(() => {
     // In a real application, this would be an API call to fetch the user's accounts
+    const fetchData = async () => {
+      if (!consentHandle) {
+        console.warn('No consent handle provided, using dummy data')
+        setAccounts(dummyAccounts)
+        setIsLoading(false)
+        return
+      }
+
+      try {
+        // First API call to request for the consented data 
+        const response1 = await fetch('http://localhost:8080/v2/data/request', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Basic YWlfblhnelVVQ3VkQm56cDNwWURzRlZaNFFqNlZyb0FtY2c6YXNfS3VTaTJlSG12QVg3QXVzYzRHNHNrWXpwZ3pLcGR4bmk='
+          },
+          body: JSON.stringify({
+            consent_handle: consentHandle,
+            from: "2023-09-26T00:00:00.000Z",
+            to: "2024-11-01T07:31:17.224Z",
+            curve: "Curve25519"
+          })
+        })
+
+        if (!response1.ok) {
+          throw new Error('Failed to fetch data request')
+        }
+
+        const data1 = await response1.json()
+        const sessionId = data1.session_id
+
+       
+
+        const data2 = await response2.json()
+        console.log('Fetched data:', data2)
     const fetchAccounts = async () => {
-      // Simulating an API call with dummy data
+
+       // Second API call to fetch the data throguh the session ID provided above
+        const response2 = await fetch('http://localhost:8080/v2/data/fetch', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Basic YWlfblhnelVVQ3VkQm56cDNwWURzRlZaNFFqNlZyb0FtY2c6YXNfS3VTaTJlSG12QVg3QXVzYzRHNHNrWXpwZ3pLcGR4bmk='
+          },
+          body: JSON.stringify({   
+            session_id: sessionId
+          })
+        })
+
+        if (!response2.ok) {
+          throw new Error('Failed to fetch data')
+        }
       const dummyAccounts: FinancialAccount[] = [
         { id: '1', bankName: 'Ignosis Bank', accountType: 'Savings', accountNumber: 'XXXX6f22', balance: 50000, hasNominee: true },
         { id: '2', bankName: 'Ignosis Bank', accountType: 'Term Deposit', accountNumber: 'XXXX1201', balance: 105622, hasNominee: false },
