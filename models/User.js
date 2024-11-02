@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const CryptoJS = require('crypto-js');
 
 const UserSchema = new mongoose.Schema({
   username: {
@@ -20,11 +21,15 @@ const UserSchema = new mongoose.Schema({
     type: String,
     required: true,
     unique: true,
+    set: (value) => CryptoJS.AES.encrypt(value, process.env.ENCRYPTION_KEY).toString(),
+    get: (value) => CryptoJS.AES.decrypt(value, process.env.ENCRYPTION_KEY).toString(CryptoJS.enc.Utf8),
   },
   aadhaar: {
     type: String,
     required: true,
     unique: true,
+    set: (value) => CryptoJS.AES.encrypt(value, process.env.ENCRYPTION_KEY).toString(),
+    get: (value) => CryptoJS.AES.decrypt(value, process.env.ENCRYPTION_KEY).toString(CryptoJS.enc.Utf8),
   },
   classXRollNo: {
     type: String,
@@ -43,5 +48,8 @@ const UserSchema = new mongoose.Schema({
     type: String,
   },
 });
+
+// Ensure virtuals are included in JSON output
+UserSchema.set('toJSON', { getters: true, virtuals: true });
 
 module.exports = mongoose.model('User', UserSchema);
