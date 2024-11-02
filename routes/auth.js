@@ -1,6 +1,5 @@
 const express = require('express');
 const router = express.Router();
-const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 
@@ -56,7 +55,7 @@ router.post('/signup', async (req, res) => {
 // Login route
 router.post('/login', async (req, res) => {
   try {
-    const { identifier, password } = req.body;
+    const { identifier } = req.body;
 
     // Check if user exists
     const user = await User.findOne({
@@ -75,6 +74,27 @@ router.post('/login', async (req, res) => {
     });
 
     res.json({ token });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Get user details route
+router.get('/user', async (req, res) => {
+  try {
+    // In a real-world scenario, you would extract the user ID from the JWT token
+    // For this example, we'll assume the user ID is passed as a query parameter
+    const { userId } = req.query;
+
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // The PAN and Aadhaar will be automatically decrypted due to the getter in the schema
+    res.json(user);
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server error' });
