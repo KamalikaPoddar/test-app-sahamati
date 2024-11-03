@@ -18,4 +18,10 @@ router.post('/users/:userId/consent-request', consentController.requestConsent);
 router.get('/consent/:handle/status', consentController.fetchConsentStatus);
 router.post('/consent/:consentHandle/data-request', consentController.triggerDataRequest);
 
+
+router.post('/users/:userId/consent-request', consentController.requestConsent);
+router.get('/consent/:handle/status', consentController.fetchConsentStatus);
+router.post('/consent/:consentHandle/data-request', consentController.triggerDataRequest);
+router.post('/data/:sessionId/fetch', consentController.triggerDataFetch);
+
 module.exports = router;
