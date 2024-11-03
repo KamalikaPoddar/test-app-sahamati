@@ -107,6 +107,17 @@ const sequelize = new Sequelize(config.database, config.username, config.passwor
   host: config.host,
   dialect: config.dialect,
 });
+const AuthToken = sequelize.define('AuthToken', {
+  token: {
+    type: DataTypes.TEXT,
+    allowNull: false,
+  },
+  expires_at: {
+    type: DataTypes.DATE,
+    allowNull: false,
+  },
+});
+
 
 const ApiResponse = sequelize.define('ApiResponse', {
   endpoint: {
@@ -136,7 +147,7 @@ const sequelize = new Sequelize(config.database, config.username, config.passwor
   dialect: config.dialect,
 });
 
-// ... (previous models)
+
 
 const ConsentRequest = sequelize.define('ConsentRequest', {
   handle: {
@@ -157,7 +168,7 @@ const ConsentRequest = sequelize.define('ConsentRequest', {
 User.hasMany(ConsentRequest);
 ConsentRequest.belongsTo(User);
 
-// ... (export other models)
+
 
 module.exports = {
   sequelize,
