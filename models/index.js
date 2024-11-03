@@ -168,7 +168,30 @@ const ConsentRequest = sequelize.define('ConsentRequest', {
 User.hasMany(ConsentRequest);
 ConsentRequest.belongsTo(User);
 
+const DataRequestSession = sequelize.define('DataRequestSession', {
+  session_id: {
+    type: DataTypes.STRING,
+    allowNull: false,
+    unique: true,
+  },
+  consent_handle: {
+    type: DataTypes.STRING,
+    allowNull: false,
+  },
+  status: {
+    type: DataTypes.STRING,
+    allowNull: false,
+    defaultValue: 'PENDING',
+  },
+  timestamp: {
+    type: DataTypes.DATE,
+    allowNull: false,
+    defaultValue: Sequelize.NOW,
+  },
+});
 
+User.hasMany(DataRequestSession);
+DataRequestSession.belongsTo(User);
 
 module.exports = {
   sequelize,
@@ -178,4 +201,6 @@ module.exports = {
   Nominee,
   ApiResponse,
   ConsentRequest,
+  AuthToken,
+  DataRequestSession,
 };
