@@ -332,6 +332,105 @@ async function fetchCBSECertificate(userId) {
 }
 
 
+//parsing teh CBSe record to get the family tree for father and mother part:
+
+async function parseCBSECertificate(xmlData) {
+  return new Promise((resolve, reject) => {
+    xml2js.parseString(xmlData, (err, result) => {
+      if (err) {
+        reject(err);
+      } else {
+        resolve(result);
+      }
+    });
+  });
+}
+
+async function updateFamilyTree(userId, fatherName, motherName) {
+  try {
+    const user = await User.findByPk(userId);
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    // Update or create father's entry
+    await FamilyMember.upsert({
+      UserId: userId,
+      name: fatherName,
+      relationship: 'Father'
+    });
+
+    // Update or create mother's entry
+    await FamilyMember.upsert({
+      UserId: userId,
+      name: motherName,
+      relationship: 'Mother'
+    });
+
+    console.log(`Family tree updated for user ${userId}`);
+  } catch (error) {
+    console.error('Error updating family tree:', error);
+    throw error;
+  }
+}
+
+async function fetchCBSECertificate(userId) {
+  try {
+    const user = await User.findByPk(userId);
+    if (!user || !user.class_X_rollno || !user.name) {
+      throw new Error('User not found or missing required information');
+    }
+
+    const requestData = {
+      txnId: uuidv4(),
+      format: "xml",
+      certificateParameters: {
+        rollno: user.class_X_rollno,
+        FullName: user.name
+      },
+      consentArtifact: {
+        consent: {
+          consentId: uuidv4(),
+          timestamp: new Date().toISOString(),
+          dataConsumer: {
+            id: process.env.DATA_CONSUMER_ID
+          },
+          dataProvider: {
+            id: "CBSE"
+          },
+          purpose: {
+            description: "Verification of CBSE Class X certificate"
+          },
+          user: {
+            idType: "MOBILE",
+            idNumber: user.mobile,
+            mobile: user.mobile,
+            email: user.email
+          },
+          data: {
+            id: "CBSE_CERTIFICATE"
+          },
+          permission: {
+            access: "READ",
+            dateRange: {
+              from: new Date().toISOString(),
+              to: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() // 30 days from now
+            },
+            frequency: {
+              unit: "MONTH",
+              value: 1,
+              repeats: 1
+            }
+          }
+        },
+        signature: {
+          signature: "dummy_signature" // In a real scenario, this should be a valid signature
+        }
+      }
+    };
+
+    const response = await 
+
 module.exports = {
   generateToken,
   requestConsent,
