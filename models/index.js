@@ -127,3 +127,44 @@ module.exports = {
   sequelize,
   ApiResponse,
 };
+
+const { Sequelize, DataTypes } = require('sequelize');
+const config = require('../config/database');
+
+const sequelize = new Sequelize(config.database, config.username, config.password, {
+  host: config.host,
+  dialect: config.dialect,
+});
+
+// ... (previous models)
+
+const ConsentRequest = sequelize.define('ConsentRequest', {
+  handle: {
+    type: DataTypes.STRING,
+    allowNull: false,
+    unique: true,
+  },
+  redirect_url: {
+    type: DataTypes.TEXT,
+    allowNull: false,
+  },
+  status: {
+    type: DataTypes.STRING,
+    defaultValue: 'PENDING',
+  },
+});
+
+User.hasMany(ConsentRequest);
+ConsentRequest.belongsTo(User);
+
+// ... (export other models)
+
+module.exports = {
+  sequelize,
+  User,
+  FamilyMember,
+  FinancialAccount,
+  Nominee,
+  ApiResponse,
+  ConsentRequest,
+};
