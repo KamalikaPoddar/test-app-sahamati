@@ -176,3 +176,126 @@ cron.schedule('* * * * *', async () => {
 });
 
 module.exports = exports;
+
+
+const axios = require('axios');
+const cron = require('node-cron');
+const { ConsentRequest, ApiResponse, AuthToken, DataRequestSession } = require('../models');
+
+const API_BASE_URL = process.env.API_BASE_URL || 'http://localhost:8080';
+
+// ... (previous functions)
+
+// Function to request data
+async function requestData(consentHandle, userId) {
+  try {
+    const authHeader = await getAuthToken();
+
+    const requestData = {
+      consent_handle: consentHandle,
+      from: "2023-09-26T00:00:00.000Z",
+      to: new Date().toISOString(),
+      curve: "Curve25519"
+    };
+
+    const response = await axios.post(`${API_BASE_URL}/v2/data/request`, requestData, {
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': authHeader
+      }
+    });
+
+    const { session_id } = response.data;
+
+    // Store the data request session
+    await DataRequestSession.create({
+      session_id,
+      consent_handle: consentHandle,
+      status: 'PENDING',
+      UserId: userId,
+    });
+
+    // Store the API response
+    await ApiResponse.create({
+      UserId: userId,
+      endpoint: '/v2/data/request',
+      request_data: JSON.stringify(requestData),
+      response_data: JSON.stringify(response.data)
+    });
+
+    console.log(`Data request initiated for consent ${consentHandle}. Session ID: ${session_id}`);
+  } catch (error) {
+    console.error(`Error requesting data for consent ${consentHandle}:`, error);
+  }
+}
+
+// Function to poll consent status
+const pollConsentStatus = async (handle) => {
+  try {
+    const authHeader = await getAuthToken();
+
+    const response = await axios.post(`${API_BASE_URL}/v2/consents/fetch`, { handle }, {
+      headers: {
+        'x-simulate-res': 'Ok',
+        'Content-Type': 'application/json',
+        'Authorization': authHeader
+      }
+    });
+
+    const consentRequest = await ConsentRequest.findOne({ where: { handle } });
+    if (consentRequest) {
+      consentRequest.status = response.data.status;
+      await consentRequest.save();
+
+      // Store the API response
+      await ApiResponse.create({
+        UserId: consentRequest.UserId,
+        endpoint: '/v2/consents/fetch',
+        request_data: JSON.stringify({ handle }),
+        response_data: JSON.stringify(response.data)
+      });
+
+      if (response.data.status === 'ACTIVE') {
+        console.log(`Consent request ${handle} is now active.`);
+        // Initiate data request when consent becomes active
+        await requestData(handle, consentRequest.UserId);
+        return true;
+      }
+    }
+    return false;
+  } catch (error) {
+    console.error(`Error polling consent status for handle ${handle}:`, error);
+    return false;
+  }
+};
+
+// Schedule polling for pending consent requests
+cron.schedule('* * * * *', async () => {
+  const pendingRequests = await ConsentRequest.findAll({ where: { status: 'PENDING' } });
+  for (const request of pendingRequests) {
+    const isActive = await pollConsentStatus(request.handle);
+    if (isActive) {
+      console.log(`Consent ${request.handle} is now active. Data request initiated.`);
+    }
+  }
+});
+
+// New function to manually trigger data request
+exports.triggerDataRequest = async (req, res) => {
+  try {
+    const { consentHandle } = req.params;
+    const consentRequest = await ConsentRequest.findOne({ where: { handle: consentHandle } });
+    
+    if (!consentRequest) {
+      return res.status(404).json({ message: 'Consent request not found' });
+    }
+
+    await requestData(consentHandle, consentRequest.UserId);
+    res.status(200).json({ message: 'Data request initiated successfully' });
+  } catch (error) {
+    console.error('Error triggering data request:', error);
+    res.status(500).json({ message: 'Error triggering data request', error: error.message });
+  }
+};
+
+module.exports = exports;
