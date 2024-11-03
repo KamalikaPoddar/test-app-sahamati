@@ -298,4 +298,121 @@ exports.triggerDataRequest = async (req, res) => {
   }
 };
 
+// Function to fetch data
+async function fetchData(sessionId) {
+  try {
+    const authHeader = await getAuthToken();
+
+    const requestData = {
+      session_id: sessionId
+    };
+
+    const response = await axios.post(`${API_BASE_URL}/v2/data/fetch`, requestData, {
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': authHeader
+      }
+    });
+
+    // Update the data request session status
+    const dataRequestSession = await DataRequestSession.findOne({ where: { session_id: sessionId } });
+    if (dataRequestSession) {
+      dataRequestSession.status = response.data.status || 'COMPLETED';
+      await dataRequestSession.save();
+    }
+
+    // Store the API response
+    await ApiResponse.create({
+      UserId: dataRequestSession.UserId,
+      endpoint: '/v2/data/fetch',
+      request_data: JSON.stringify(requestData),
+      response_data: JSON.stringify(response.data)
+    });
+
+    console.log(`Data fetched for session ${sessionId}. Status: ${response.data.status}`);
+    return response.data;
+  } catch (error) {
+    console.error(`Error fetching data for session ${sessionId}:`, error);
+    throw error;
+  }
+}
+
+// Function to request data
+async function requestData(consentHandle, userId) {
+  try {
+    const authHeader = await getAuthToken();
+
+    const requestData = {
+      consent_handle: consentHandle,
+      from: "2023-09-26T00:00:00.000Z",
+      to: new Date().toISOString(),
+      curve: "Curve25519"
+    };
+
+    const response = await axios.post(`${API_BASE_URL}/v2/data/request`, requestData, {
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': authHeader
+      }
+    });
+
+    const { session_id } = response.data;
+
+    // Store the data request session
+    await DataRequestSession.create({
+      session_id,
+      consent_handle: consentHandle,
+      status: 'PENDING',
+      UserId: userId,
+    });
+
+    // Store the API response
+    await ApiResponse.create({
+      UserId: userId,
+      endpoint: '/v2/data/request',
+      request_data: JSON.stringify(requestData),
+      response_data: JSON.stringify(response.data)
+    });
+
+    console.log(`Data request initiated for consent ${consentHandle}. Session ID: ${session_id}`);
+
+    // Fetch data immediately after requesting
+    await fetchData(session_id);
+  } catch (error) {
+    console.error(`Error requesting data for consent ${consentHandle}:`, error);
+  }
+}
+
+// ... (previous functions)
+
+// New function to manually trigger data fetch
+exports.triggerDataFetch = async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+    const dataRequestSession = await DataRequestSession.findOne({ where: { session_id: sessionId } });
+    
+    if (!dataRequestSession) {
+      return res.status(404).json({ message: 'Data request session not found' });
+    }
+
+    const fetchedData = await fetchData(sessionId);
+    res.status(200).json({ message: 'Data fetched successfully', data: fetchedData });
+  } catch (error) {
+    console.error('Error triggering data fetch:', error);
+    res.status(500).json({ message: 'Error triggering data fetch', error: error.message });
+  }
+};
+
+// Schedule polling for pending data request sessions
+cron.schedule('*/5 * * * *', async () => {
+  const pendingSessions = await DataRequestSession.findAll({ where: { status: 'PENDING' } });
+  for (const session of pendingSessions) {
+    try {
+      await fetchData(session.session_id);
+    } catch (error) {
+      console.error(`Error fetching data for session ${session.session_id}:`, error);
+    }
+  }
+});
+
 module.exports = exports;
